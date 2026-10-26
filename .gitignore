@@ -1,0 +1,25 @@
+# Local models and tools (large, downloaded by scripts/)
+/models/
+/tools/
+/server/third_party/
+models-download.log
+
+# Build output
+/server/bin/
+/server/internal/api/dist/
+/web/node_modules/
+/web/dist/
+__pycache__/
+*.pyc
+
+# Local data (your statements and ledger never go into git)
+/data/
+*.duckdb
+*.duckdb.wal
+
+# Editors and OS
+.vs/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
