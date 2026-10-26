@@ -401,7 +401,7 @@ def write_bt(events: list[Event], rng: random.Random, path: Path, opening: int):
         lines.append(f"{e.date:%Y-%m-%d},{e.date:%Y-%m-%d},\"{desc}\",{rng.randint(10**9, 10**10 - 1)},{debit},{credit},\"{fmt_ro(b)}\"")
         e.extra["description"] = desc
     lines.append(f"Sold final:,\"{fmt_ro(bal[-1] if bal else opening)}\"")
-    path.write_text("\r\n".join(lines) + "\r\n", encoding="utf-8-sig")
+    path.write_text("\r\n".join(lines) + "\r\n", encoding="utf-8-sig", newline="")
 
 
 def write_bt_pdf(events: list[Event], path: Path, opening: int, month: dt.date):
@@ -466,7 +466,7 @@ def write_ing(events: list[Event], path: Path, opening: int, start: dt.date, end
     final = opening + before + sum(e.amount for e in rows)
     lines.append(f'"","","Sold initial","","{fmt_ro(opening + before)}",""')
     lines.append(f'"","","Sold final","","{fmt_ro(final)}",""')
-    path.write_text("\r\n".join(lines) + "\r\n", encoding="utf-8")
+    path.write_text("\r\n".join(lines) + "\r\n", encoding="utf-8", newline="")
 
 
 def write_revolut(events: list[Event], path: Path, opening: dict[str, int]):
@@ -484,14 +484,14 @@ def write_revolut(events: list[Event], path: Path, opening: dict[str, int]):
         e.extra["description"] = desc
     # Revolut also lists what never went through; importers must skip it.
     lines.append(f"CARD_PAYMENT,Current,2026-09-12 21:03:11,,Steam,-59.99,0.00,RON,DECLINED,")
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="")
 
 
 def write_rates(world: World, path: Path):
     lines = ["date,currency,ron"]
     for d in sorted(world.rates):
         lines.append(f"{d:%Y-%m-%d},EUR,{world.rates[d] / 10000:.4f}")
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="")
 
 
 def generate(out: Path, seed: int = 7) -> dict:
@@ -520,7 +520,7 @@ def generate(out: Path, seed: int = 7) -> dict:
         ],
         "rates": {d.isoformat(): r / 10000 for d, r in sorted(world.rates.items())},
     }
-    (out / "truth.json").write_text(json.dumps(truth, indent=1, ensure_ascii=False), encoding="utf-8")
+    (out / "truth.json").write_text(json.dumps(truth, indent=1, ensure_ascii=False), encoding="utf-8", newline="")
     return truth
 
 

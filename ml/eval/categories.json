@@ -1,0 +1,140 @@
+{
+ "import_seconds": 115.3,
+ "steps": [
+  {
+   "corrections": 0,
+   "accuracy": 0.859,
+   "lines": 1071,
+   "per_category": {
+    "Cash": 1.0,
+    "Entertainment": 1.0,
+    "Exchange": 1.0,
+    "Fees": 1.0,
+    "Food Delivery": 1.0,
+    "Fuel": 1.0,
+    "Groceries": 1.0,
+    "Health": 1.0,
+    "Other Income": 1.0,
+    "Phone & Internet": 1.0,
+    "Rent": 1.0,
+    "Restaurants": 0.727,
+    "Salary": 1.0,
+    "Shopping": 0.976,
+    "Subscriptions": 1.0,
+    "Transfer": 1.0,
+    "Transport": 0.493,
+    "Travel": 0.667,
+    "Utilities": 1.0
+   },
+   "top_errors": [
+    "La Mama: Restaurants taken for Groceries (1)",
+    "STB: Transport taken for Utilities (1)",
+    "Bolt: Transport taken for Food Delivery (1)",
+    "Bolt: Transport taken for Food Delivery (1)",
+    "Bolt: Transport taken for Food Delivery (1)",
+    "Bolt: Transport taken for Food Delivery (1)",
+    "Bolt: Transport taken for Food Delivery (1)",
+    "Bolt: Transport taken for Food Delivery (1)"
+   ]
+  },
+  {
+   "corrections": 3,
+   "accuracy": 0.944,
+   "lines": 1071,
+   "per_category": {
+    "Cash": 1.0,
+    "Entertainment": 1.0,
+    "Exchange": 1.0,
+    "Fees": 1.0,
+    "Food Delivery": 1.0,
+    "Fuel": 1.0,
+    "Groceries": 1.0,
+    "Health": 1.0,
+    "Other Income": 1.0,
+    "Phone & Internet": 0.5,
+    "Rent": 1.0,
+    "Restaurants": 0.969,
+    "Salary": 1.0,
+    "Shopping": 0.976,
+    "Subscriptions": 0.486,
+    "Transfer": 1.0,
+    "Transport": 1.0,
+    "Travel": 0.667,
+    "Utilities": 1.0
+   },
+   "top_errors": [
+    "Netflix: Subscriptions taken for Fees (1)",
+    "Spotify: Subscriptions taken for Fees (1)",
+    "Digi: Phone & Internet taken for Fees (1)",
+    "Netflix: Subscriptions taken for Fees (1)",
+    "Spotify: Subscriptions taken for Fees (1)",
+    "Digi: Phone & Internet taken for Fees (1)",
+    "Netflix: Subscriptions taken for Fees (1)",
+    "Spotify: Subscriptions taken for Fees (1)"
+   ]
+  },
+  {
+   "corrections": 6,
+   "accuracy": 0.9981,
+   "lines": 1071,
+   "per_category": {
+    "Cash": 1.0,
+    "Entertainment": 1.0,
+    "Exchange": 1.0,
+    "Fees": 1.0,
+    "Food Delivery": 1.0,
+    "Fuel": 1.0,
+    "Groceries": 1.0,
+    "Health": 1.0,
+    "Other Income": 1.0,
+    "Phone & Internet": 1.0,
+    "Rent": 1.0,
+    "Restaurants": 1.0,
+    "Salary": 1.0,
+    "Shopping": 0.976,
+    "Subscriptions": 1.0,
+    "Transfer": 1.0,
+    "Transport": 1.0,
+    "Travel": 0.667,
+    "Utilities": 1.0
+   },
+   "top_errors": [
+    "eMAG: Shopping taken for Other Income (1)",
+    "OBB: Travel taken for Transport (1)"
+   ]
+  },
+  {
+   "corrections": 8,
+   "accuracy": 0.9963,
+   "lines": 1071,
+   "per_category": {
+    "Cash": 1.0,
+    "Entertainment": 1.0,
+    "Exchange": 1.0,
+    "Fees": 1.0,
+    "Food Delivery": 1.0,
+    "Fuel": 1.0,
+    "Groceries": 1.0,
+    "Health": 1.0,
+    "Other Income": 1.0,
+    "Phone & Internet": 1.0,
+    "Rent": 1.0,
+    "Restaurants": 0.969,
+    "Salary": 1.0,
+    "Shopping": 1.0,
+    "Subscriptions": 1.0,
+    "Transfer": 1.0,
+    "Transport": 1.0,
+    "Travel": 1.0,
+    "Utilities": 1.0
+   },
+   "top_errors": [
+    "Figlmueller: Restaurants taken for Health (1)",
+    "Naschmarkt: Restaurants taken for Groceries (1)",
+    "Naschmarkt: Restaurants taken for Groceries (1)",
+    "Figlmueller: Restaurants taken for Health (1)"
+   ]
+  }
+ ],
+ "date": "2026-10-26"
+}

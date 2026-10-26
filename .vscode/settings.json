@@ -1,0 +1,10 @@
+{
+  "gopls": { "build.directoryFilters": ["-web", "-ml", "-tools", "-models"] },
+  "python.analysis.extraPaths": ["ml"],
+  "python.testing.unittestEnabled": true,
+  "python.testing.cwd": "${workspaceFolder}/ml",
+  "python.testing.unittestArgs": ["-s", "tests", "-t", "."],
+  "typescript.tsdk": "web/node_modules/typescript/lib",
+  "files.exclude": { "web/node_modules": true, "**/__pycache__": true },
+  "search.exclude": { "web/node_modules": true, "web/dist": true, "server/internal/api/dist": true, "testdata": true, "tools": true, "models": true }
+}

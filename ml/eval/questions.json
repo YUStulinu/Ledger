@@ -1,0 +1,520 @@
+{
+ "questions": 25,
+ "right": 24,
+ "accuracy": 0.96,
+ "results": [
+  {
+   "question": "Cât am cheltuit pe cumpărături de la supermarket în martie 2026?",
+   "kind": "numbers",
+   "expected": [
+    1474.37
+   ],
+   "ok": true,
+   "sql": "SELECT round(sum(amount_ron), 2) AS spent_ron FROM expenses WHERE category = 'Groceries' AND month = 3 AND year = 2026",
+   "rows": [
+    [
+     1474.37
+    ]
+   ],
+   "error": null,
+   "retried": 0,
+   "seconds": 5.3
+  },
+  {
+   "question": "Cât am cheltuit pe mâncare în martie 2026 față de februarie 2026?",
+   "kind": "numbers",
+   "expected": [
+    2380.18,
+    2199.18
+   ],
+   "ok": true,
+   "sql": "SELECT month_start, round(sum(amount_ron), 2) AS food_ron FROM expenses WHERE category IN ('Groceries', 'Restaurants', 'Food Delivery') AND month_start IN (DATE '2026-02-01', DATE '2026-03-01') GROUP BY month_start ORDER BY month_start",
+   "rows": [
+    [
+     "2026-02-01",
+     2199.18
+    ],
+    [
+     "2026-03-01",
+     2380.18
+    ]
+   ],
+   "error": null,
+   "retried": 0,
+   "seconds": 5.9
+  },
+  {
+   "question": "How much did I spend on fuel in 2025?",
+   "kind": "numbers",
+   "expected": [
+    4451.44
+   ],
+   "ok": true,
+   "sql": "SELECT round(sum(amount_ron), 2) AS fuel_ron FROM expenses WHERE category = 'Fuel' AND year = 2025",
+   "rows": [
+    [
+     4451.44
+    ]
+   ],
+   "error": null,
+   "retried": 0,
+   "seconds": 2.8
+  },
+  {
+   "question": "Care a fost salariul meu total în 2025?",
+   "kind": "numbers",
+   "expected": [
+    88650.0
+   ],
+   "ok": true,
+   "sql": "SELECT round(sum(amount_ron), 2) AS total_salary_ron FROM income WHERE category = 'Salary' AND year = 2025",
+   "rows": [
+    [
+     88650
+    ]
+   ],
+   "error": null,
+   "retried": 0,
+   "seconds": 3.5
+  },
+  {
+   "question": "How much did I spend at Kaufland in total?",
+   "kind": "numbers",
+   "expected": [
+    7265.25
+   ],
+   "ok": true,
+   "sql": "SELECT round(sum(amount_ron), 2) AS total_spent_ron FROM expenses WHERE merchant ILIKE '%KAUFLAND%'",
+   "rows": [
+    [
+     7265.25
+    ]
+   ],
+   "error": null,
+   "retried": 0,
+   "seconds": 3.0
+  },
+  {
+   "question": "Cât am plătit pe abonamente în 2026?",
+   "kind": "numbers",
+   "expected": [
+    3542.94
+   ],
+   "ok": true,
+   "sql": "SELECT round(sum(amount_ron), 2) AS spent_ron FROM expenses WHERE category = 'Subscriptions' AND year = 2026",
+   "rows": [
+    [
+     3542.94
+    ]
+   ],
+   "error": null,
+   "retried": 0,
+   "seconds": 2.8
+  },
+  {
+   "question": "What were my top 3 spending categories in August 2025?",
+   "kind": "labels",
+   "expected": [
+    "Restaurants",
+    "Travel",
+    "Rent"
+   ],
+   "ok": true,
+   "sql": "SELECT category, round(sum(amount_ron), 2) AS spent_ron FROM expenses WHERE month = 8 AND year = 2025 GROUP BY category ORDER BY spent_ron DESC LIMIT 3",
+   "rows": [
+    [
+     "Restaurants",
+     3123.85
+    ],
+    [
+     "Travel",
+     3051.22
+    ],
+    [
+     "Rent",
+     2500
+    ]
+   ],
+   "error": null,
+   "retried": 0,
+   "seconds": 4.1
+  },
+  {
+   "question": "În ce lună am cheltuit cel mai mult la restaurante?",
+   "kind": "label_or_number",
+   "expected": [
+    "2025-08",
+    3123.85
+   ],
+   "ok": true,
+   "sql": "SELECT month_start AS month, round(sum(amount_ron), 2) AS spent_ron FROM expenses WHERE category = 'Restaurants' GROUP BY month_start ORDER BY spent_ron DESC LIMIT 1",
+   "rows": [
+    [
+     "2025-08-01",
+     3123.85
+    ]
+   ],
+   "error": null,
+   "retried": 0,
+   "seconds": 4.1
+  },
+  {
+   "question": "How much did I spend in euros in August 2025?",
+   "kind": "numbers",
+   "expected": [
+    1207.2
+   ],
+   "ok": true,
+   "sql": "SELECT round(sum(amount), 2) AS euros_spent FROM expenses WHERE currency = 'EUR' AND month = 8 AND year = 2025",
+   "rows": [
+    [
+     1207.2
+    ]
+   ],
+   "error": null,
+   "retried": 0,
+   "seconds": 3.4
+  },
+  {
+   "question": "Cât am plătit chirie în total?",
+   "kind": "numbers",
+   "expected": [
+    45000.0
+   ],
+   "ok": true,
+   "sql": "SELECT round(sum(amount_ron), 2) AS total_rent_ron FROM expenses WHERE category = 'Rent'",
+   "rows": [
+    [
+     45000
+    ]
+   ],
+   "error": null,
+   "retried": 0,
+   "seconds": 2.2
+  },
+  {
+   "question": "How much did Netflix cost me in 2026?",
+   "kind": "numbers",
+   "expected": [
+    519.91
+   ],
+   "ok": true,
+   "sql": "SELECT round(sum(amount_ron), 2) AS netflix_cost_ron FROM expenses WHERE merchant ILIKE '%NETFLIX%' AND year = 2026",
+   "rows": [
+    [
+     519.91
+    ]
+   ],
+   "error": null,
+   "retried": 0,
+   "seconds": 3.1
+  },
+  {
+   "question": "Care este soldul fiecărui cont?",
+   "kind": "numbers",
+   "expected": [
+    28735.69,
+    33184.67,
+    148.08,
+    26.12
+   ],
+   "ok": true,
+   "sql": "SELECT bank, account, round(balance, 2) AS balance_ron FROM balances",
+   "rows": [
+    [
+     "Revolut",
+     "Assets:Revolut:RON",
+     148.08
+    ],
+    [
+     "Revolut",
+     "Assets:Revolut:EUR",
+     26.12
+    ],
+    [
+     "BT",
+     "Assets:BT:RON",
+     28735.69
+    ],
+    [
+     "ING",
+     "Assets:ING:RON",
+     33184.67
+    ]
+   ],
+   "error": null,
+   "retried": 0,
+   "seconds": 1.8
+  },
+  {
+   "question": "How many Bolt or Uber rides did I take in July 2026?",
+   "kind": "numbers",
+   "expected": [
+    10
+   ],
+   "ok": true,
+   "sql": "SELECT count(*) AS rides_count FROM expenses WHERE (merchant ILIKE '%BOLT%' OR merchant ILIKE '%UBER%') AND month = 7 AND year = 2026",
+   "rows": [
+    [
+     10
+    ]
+   ],
+   "error": null,
+   "retried": 0,
+   "seconds": 4.5
+  },
+  {
+   "question": "Cât am cheltuit pe utilități în iarnă, din decembrie 2025 până în februarie 2026?",
+   "kind": "numbers",
+   "expected": [
+    2073.57
+   ],
+   "ok": true,
+   "sql": "SELECT round(sum(amount_ron), 2) AS utilities_ron FROM expenses WHERE category = 'Utilities' AND month_start BETWEEN DATE '2025-12-01' AND DATE '2026-02-28'",
+   "rows": [
+    [
+     2073.57
+    ]
+   ],
+   "error": null,
+   "retried": 1,
+   "seconds": 9.7
+  },
+  {
+   "question": "What is my average monthly spending on groceries?",
+   "kind": "numbers",
+   "expected": [
+    1452.62
+   ],
+   "ok": true,
+   "sql": "SELECT round(avg(total), 2) AS avg_monthly_spending FROM (SELECT month_start, sum(amount_ron) AS total FROM expenses WHERE category = 'Groceries' GROUP BY month_start)",
+   "rows": [
+    [
+     1452.62
+    ]
+   ],
+   "error": null,
+   "retried": 0,
+   "seconds": 3.6
+  },
+  {
+   "question": "Câți bani am retras cash în 2026?",
+   "kind": "numbers",
+   "expected": [
+    2800.0
+   ],
+   "ok": true,
+   "sql": "SELECT round(sum(amount_ron), 2) AS cash_withdrawals_ron FROM transactions WHERE kind = 'expense' AND category = 'Cash' AND year = 2026",
+   "rows": [
+    [
+     -2800
+    ]
+   ],
+   "error": null,
+   "retried": 0,
+   "seconds": 3.4
+  },
+  {
+   "question": "How much interest have I earned in total?",
+   "kind": "numbers",
+   "expected": [
+    221.11
+   ],
+   "ok": true,
+   "sql": "SELECT round(sum(amount_ron), 2) AS total_interest_ron FROM income WHERE category = 'Other Income' AND description ILIKE '%DOBANDA%'",
+   "rows": [
+    [
+     221.11
+    ]
+   ],
+   "error": null,
+   "retried": 0,
+   "seconds": 2.9
+  },
+  {
+   "question": "Cât am plătit comisioane bancare în 2026?",
+   "kind": "numbers",
+   "expected": [
+    70.0
+   ],
+   "ok": true,
+   "sql": "SELECT round(sum(amount_ron), 2) AS fees_ron FROM expenses WHERE category = 'Fees' AND year = 2026",
+   "rows": [
+    [
+     70
+    ]
+   ],
+   "error": null,
+   "retried": 0,
+   "seconds": 2.8
+  },
+  {
+   "question": "Cât am cheltuit pe sănătate anul acesta?",
+   "kind": "numbers",
+   "expected": [
+    1782.31
+   ],
+   "ok": true,
+   "sql": "SELECT round(sum(amount_ron), 2) AS health_spent_ron FROM expenses WHERE category = 'Health' AND year = 2026",
+   "rows": [
+    [
+     1782.31
+    ]
+   ],
+   "error": null,
+   "retried": 0,
+   "seconds": 2.9
+  },
+  {
+   "question": "Which merchant did I spend the most money at in 2025?",
+   "kind": "label",
+   "expected": [
+    "Popescu Andrei (rent)"
+   ],
+   "ok": true,
+   "sql": "SELECT merchant, round(sum(amount_ron), 2) AS spent_ron FROM expenses WHERE year = 2025 GROUP BY merchant ORDER BY spent_ron DESC LIMIT 1",
+   "rows": [
+    [
+     "POPESCU ANDREI",
+     22500
+    ]
+   ],
+   "error": null,
+   "retried": 0,
+   "seconds": 3.6
+  },
+  {
+   "question": "How much did I spend in total in September 2026?",
+   "kind": "numbers",
+   "expected": [
+    8086.45
+   ],
+   "ok": true,
+   "sql": "SELECT round(sum(amount_ron), 2) AS total_spent_ron FROM expenses WHERE month = 9 AND year = 2026",
+   "rows": [
+    [
+     8086.45
+    ]
+   ],
+   "error": null,
+   "retried": 0,
+   "seconds": 3.6
+  },
+  {
+   "question": "Am cheltuit mai mult în iulie sau în august 2026?",
+   "kind": "numbers",
+   "expected": [
+    8737.16
+   ],
+   "ok": false,
+   "sql": "SELECT month_start, category, round(sum(amount_ron), 2) AS spent_ron FROM expenses WHERE year = 2026 AND (month = 7 OR month = 8) GROUP BY month_start, category ORDER BY month_start, spent_ron DESC",
+   "rows": [
+    [
+     "2026-07-01",
+     "Rent",
+     2500
+    ],
+    [
+     "2026-07-01",
+     "Groceries",
+     1850.37
+    ],
+    [
+     "2026-07-01",
+     "Shopping",
+     692.23
+    ],
+    [
+     "2026-07-01",
+     "Cash",
+     400
+    ],
+    [
+     "2026-07-01",
+     "Subscriptions",
+     395.97
+    ],
+    [
+     "2026-07-01",
+     "Transport",
+     391.99
+    ]
+   ],
+   "error": null,
+   "retried": 0,
+   "seconds": 5.4
+  },
+  {
+   "question": "What was my total income in 2026?",
+   "kind": "numbers",
+   "expected": [
+    97805.64
+   ],
+   "ok": true,
+   "sql": "SELECT round(sum(amount_ron), 2) AS total_income_ron FROM income WHERE year = 2026",
+   "rows": [
+    [
+     97805.64
+    ]
+   ],
+   "error": null,
+   "retried": 0,
+   "seconds": 2.5
+  },
+  {
+   "question": "Cât am economisit în 2025, adică venituri minus cheltuieli?",
+   "kind": "numbers",
+   "expected": [
+    12442.0
+   ],
+   "ok": true,
+   "sql": "SELECT round((SELECT sum(amount_ron) FROM income WHERE year = 2025) - (SELECT sum(amount_ron) FROM expenses WHERE year = 2025), 2) AS savings_ron",
+   "rows": [
+    [
+     12442
+    ]
+   ],
+   "error": null,
+   "retried": 0,
+   "seconds": 4.0
+  },
+  {
+   "question": "Ce abonamente am plătit în 2026 și cât m-a costat fiecare?",
+   "kind": "labels",
+   "expected": [
+    "World Class",
+    "Dropbox",
+    "Netflix",
+    "Spotify"
+   ],
+   "ok": true,
+   "sql": "SELECT category, merchant, round(sum(amount_ron), 2) AS cost_ron FROM expenses WHERE category = 'Subscriptions' AND year = 2026 GROUP BY category, merchant ORDER BY cost_ron DESC",
+   "rows": [
+    [
+     "Subscriptions",
+     "WORLD CLASS ROMANIA",
+     2241
+    ],
+    [
+     "Subscriptions",
+     "DROPBOX",
+     539.12
+    ],
+    [
+     "Subscriptions",
+     "NETFLIX.COM",
+     519.91
+    ],
+    [
+     "Subscriptions",
+     "SPOTIFY",
+     242.91
+    ]
+   ],
+   "error": null,
+   "retried": 0,
+   "seconds": 4.5
+  }
+ ],
+ "date": "2026-10-26"
+}

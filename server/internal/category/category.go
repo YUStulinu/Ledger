@@ -28,14 +28,14 @@ const (
 // All lists the categories in display order.
 var All = []Category{
 	{"Groceries", Expense, "supermarkets and food shops (Kaufland, Lidl, Mega Image, Carrefour, Profi)"},
-	{"Restaurants", Expense, "restaurants, cafes, bars, fast food eaten out"},
-	{"Food Delivery", Expense, "food ordered through apps (Glovo, Tazz, Bolt Food)"},
-	{"Transport", Expense, "taxis and ride hailing (Bolt, Uber), public transport, metro, parking"},
+	{"Restaurants", Expense, "restaurants, cafes, bars, fast food (McDonald's, KFC, Starbucks), paid on the spot, at home or abroad"},
+	{"Food Delivery", Expense, "food ordered through apps (Glovo, Tazz, Bolt Food, which statements show as BOLT.EU/O)"},
+	{"Transport", Expense, "taxis and ride hailing (Bolt rides show as BOLT.EU/R, Uber), public transport (STB, metro), parking"},
 	{"Fuel", Expense, "petrol stations (OMV, Petrom, MOL, Rompetrol)"},
 	{"Rent", Expense, "rent paid to a landlord"},
 	{"Utilities", Expense, "electricity, gas, water, heating (Enel, Engie, E.ON)"},
 	{"Phone & Internet", Expense, "mobile phone, internet, TV (Digi, Orange, Vodafone)"},
-	{"Subscriptions", Expense, "recurring digital services and memberships (Netflix, Spotify, Dropbox, gym)"},
+	{"Subscriptions", Expense, "recurring digital services and memberships (Netflix, Spotify, Dropbox, a gym such as World Class)"},
 	{"Health", Expense, "pharmacies, doctors, dentists, clinics"},
 	{"Shopping", Expense, "clothes, electronics, home goods, online shops (eMAG, Altex, Decathlon, H&M)"},
 	{"Entertainment", Expense, "cinema, concerts, events, games"},

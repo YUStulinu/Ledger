@@ -109,12 +109,17 @@ type Unlabeled struct {
 	Date                                                          time.Time
 }
 
-// LinesToLabel lists lines with no label, or with labels from sources less trusted than `above`.
+// LinesToLabel lists lines with no label, or with labels from sources less trusted than `above`,
+// leaving out the transfers and exchanges the last rebuild paired.
 func (s *Store) LinesToLabel(ctx context.Context, above string) ([]Unlabeled, error) {
 	rows, err := s.DB.QueryContext(ctx, `SELECT b.key, b.bank, coalesce(b.description, ''), coalesce(b.merchant, ''), coalesce(b.merchant_key, ''),
 		b.currency, coalesce(b.type, ''), b.amount, b.date
 		FROM bank_lines b LEFT JOIN labels l ON l.key = b.key
-		WHERE l.key IS NULL OR (CASE l.source WHEN 'user' THEN 4 WHEN 'rule' THEN 3 WHEN 'model' THEN 2 ELSE 1 END) < ?
+		WHERE (l.key IS NULL OR (CASE l.source WHEN 'user' THEN 4 WHEN 'rule' THEN 3 WHEN 'model' THEN 2 ELSE 1 END) < ?)
+		  -- Lines already paired as transfers or exchanges (by the last rebuild) need no category.
+		  AND b.key NOT IN (SELECT p.line_key FROM ledger_postings p JOIN ledger_transactions t ON t.id = p.tx_id
+		                    WHERE t.kind IN ('transfer', 'exchange') AND t.category <> '' AND p.line_key IS NOT NULL
+		                      AND p.line_key NOT IN (SELECT key FROM labels))
 		ORDER BY b.date, b.seq`, trust[above])
 	if err != nil {
 		return nil, err

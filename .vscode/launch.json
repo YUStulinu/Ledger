@@ -1,0 +1,29 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Ledger: serve (Linux/macOS)",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/server/cmd/ledger",
+      "args": ["serve"],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "name": "Ledger: serve (Windows, DuckDB DLL)",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/server/cmd/ledger",
+      "args": ["serve"],
+      "cwd": "${workspaceFolder}",
+      "buildFlags": "-tags=duckdb_use_lib",
+      "env": {
+        "CGO_ENABLED": "1",
+        "CGO_LDFLAGS": "-L${workspaceFolder}/server/third_party/duckdb -lduckdb",
+        "PATH": "${workspaceFolder}/server/third_party/duckdb;${env:PATH}"
+      }
+    }
+  ]
+}

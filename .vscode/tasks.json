@@ -1,0 +1,42 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Ledger: build (web UI + server)",
+      "type": "shell",
+      "command": "bash scripts/build.sh",
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": ["$go"]
+    },
+    {
+      "label": "Ledger: Go tests",
+      "type": "shell",
+      "command": "bash scripts/go.sh test ./...",
+      "group": "test",
+      "problemMatcher": ["$go"]
+    },
+    {
+      "label": "Ledger: Python tests",
+      "type": "shell",
+      "command": "python -m unittest discover -s tests -t .",
+      "options": { "cwd": "${workspaceFolder}/ml" },
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "Ledger: web dev server (proxies the API to ledger serve)",
+      "type": "shell",
+      "command": "npm run dev",
+      "options": { "cwd": "${workspaceFolder}/web" },
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "Ledger: evaluate (categories, then questions; needs the model)",
+      "type": "shell",
+      "command": "python -m ledger_ml.evaluate categories && python -m ledger_ml.evaluate questions",
+      "options": { "cwd": "${workspaceFolder}/ml" },
+      "problemMatcher": []
+    }
+  ]
+}

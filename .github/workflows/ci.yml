@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  server:
+    # The Go server: importers, ledger, insights, text-to-SQL checks, API. Linux links DuckDB
+    # statically; Windows links the official DuckDB DLL (scripts/setup-duckdb.sh).
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: server/go.mod
+          cache-dependency-path: server/go.sum
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Python dependencies (the forecast runs in Python)
+        run: pip install -r ml/requirements.txt
+      - name: gofmt
+        if: runner.os == 'Linux'
+        run: test -z "$(gofmt -l server)" || { gofmt -l server; exit 1; }
+      - name: Vet
+        run: bash scripts/go.sh vet ./...
+      - name: Tests
+        run: bash scripts/go.sh test ./...
+
+  ml:
+    # The classifier, the forecast and the synthetic statements.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r ml/requirements.txt
+      - name: Tests
+        working-directory: ml
+        run: python -m unittest discover -s tests -t . -v
+
+  web:
+    # The Svelte UI: type check and production build.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - working-directory: web
+        run: npm ci
+      - name: Type check
+        working-directory: web
+        run: npm run check
+      - name: Build
+        working-directory: web
+        run: npm run build
+
+# The evaluations with the language model (ml/ledger_ml/evaluate.py) run locally only: they need the
+# 4.7 GB model and a GPU.

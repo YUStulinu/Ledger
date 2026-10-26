@@ -188,7 +188,7 @@ func (s *Store) Rebuild(ctx context.Context) (*BuildStats, error) {
 		case c.Kind == category.Income:
 			kind, other = "income", "Income:"+cat
 		}
-		txs = append(txs, ledgerTx{date: l.Date, kind: kind, category: cat, merchant: l.Merchant, description: l.Description,
+		txs = append(txs, ledgerTx{date: l.Date, kind: kind, category: cat, merchant: displayMerchant(l), description: l.Description,
 			postings: []posting{{names.of(l.Account, l.Currency), l.Currency, l.Key, l.Amount}, {other, l.Currency, "", -l.Amount}}})
 	}
 
@@ -390,4 +390,13 @@ func (s *Store) writeLedger(ctx context.Context, txs []ledgerTx, names assetAcco
 		}
 	}
 	return tx.Commit()
+}
+
+// displayMerchant is the merchant as questions and reports show it: the normalized key (one name
+// for every store of a chain), or the raw name when there is no key.
+func displayMerchant(l line) string {
+	if l.MerchantKey != "" {
+		return l.MerchantKey
+	}
+	return l.Merchant
 }

@@ -1,3 +1,5 @@
 * text=auto
 *.sh text eol=lf
 *.pdf binary
+# Statements are byte-exact test fixtures (banks export CRLF, some UTF-8 with a BOM).
+testdata/** -text

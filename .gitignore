@@ -6,7 +6,8 @@ models-download.log
 
 # Build output
 /server/bin/
-/server/internal/api/dist/
+/server/internal/api/dist/*
+!/server/internal/api/dist/.gitkeep
 /web/node_modules/
 /web/dist/
 __pycache__/
