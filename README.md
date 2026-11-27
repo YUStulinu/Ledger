@@ -49,9 +49,43 @@ ledger categorize [--relabel]   sort what is not sorted yet
 ledger correct <key> <category> set a category by hand, for every transaction of that merchant
 ledger transactions | recurring | alerts | forecast [--days 90] [--from YYYY-MM-DD]
 ledger ask "Cât am dat pe benzină anul ăsta?"
+ledger schema                   the views, categories and rules a query may use
+ledger query "SELECT ..."       your own SQL (an AI agent's), with the same checks as ask
+ledger merchants [--uncategorized]   each merchant once, with one line's key and description
+ledger correct --file list.json      many corrections at once: [{"key": ..., "category": ...}]
 ledger serve [--addr 127.0.0.1:8080]
 common flags: --db data/ledger.duckdb   --no-llm   --json
 ```
+
+### From an AI agent (Claude Code, Codex, Cursor)
+
+An agent can do the language model's two jobs itself, so it needs neither the 4.7 GB model nor
+llama.cpp. The [Ledger skill on Agensi](https://agensi.io/skills/personal-finance-from-romanian-bank-statements)
+works this way:
+
+1. `ledger import <files> --no-llm` reads and checks the statements. Rules sort what the statements
+   say outright.
+2. `ledger merchants --uncategorized --json` lists the rest: one row per merchant, with a line's key
+   and description. The agent picks the categories and applies them all with
+   `ledger correct --file list.json`. That is one rebuild, so 48 merchants take under 2 s.
+3. `ledger schema` describes the views. The agent writes the SQL for a question and runs it with
+   `ledger query`, which applies `ask`'s checks: a single SELECT over the four views, no table
+   functions or outside reads, rolled back, 10 s and 500 rows at most.
+
+**Measured on the synthetic statements**, with Claude as the agent and no corrections from the user:
+- the agent categorized the 49 merchants the rules left, from their names and descriptions alone. 1067 of
+  1071 lines were right (99.6%). The local model gets 85.9% before corrections. The 4 misses are
+  Barcelona metro rides, put under Travel instead of Transport;
+- the agent wrote SQL for the 25 evaluation questions and got 25 of 25 right. Each query took under
+  0.15 s.
+
+`ledger query` refuses `DELETE`, `DROP` and `ATTACH`, the internal tables, `read_csv` and
+`getenv`, each with a message that says what is allowed.
+
+Each [release](https://github.com/YUStulinu/Ledger/releases) holds `ledger` for Windows and Linux
+with the web UI built in, plus the Python part next to it (`ml/`, which needs Python and numpy).
+On Windows it also holds `duckdb.dll`. Unpacked anywhere, it keeps its data in `data/` beside the
+program.
 
 Ledger starts llama-server itself when it first needs the model, on `127.0.0.1:8091` (or
 `LEDGER_LLAMA_PORT`). It reuses one that is already running there. The server is tied to Ledger's

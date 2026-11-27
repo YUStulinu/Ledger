@@ -4,11 +4,15 @@
 //	ledger rates <file>                    exchange rates (the BNR's XML, or date,currency,ron CSV)
 //	ledger categorize [--relabel]          sort what is not sorted yet
 //	ledger correct <key> <category>        set a category by hand (for every transaction of that merchant)
+//	ledger correct --file list.json        many corrections at once ([{"key", "category"}]), one rebuild
+//	ledger merchants [--uncategorized]     each merchant once, with one line's key and description
 //	ledger transactions [--category C] [--month YYYY-MM] [--uncategorized]
 //	ledger recurring                       subscriptions, bills and income on a schedule
 //	ledger alerts                          double charges, unusual amounts, new fees
 //	ledger forecast [--days 90] [--from YYYY-MM-DD]
 //	ledger ask "question"                  a question in Romanian or English, answered with checked SQL
+//	ledger schema                          the views, categories and rules a query may use
+//	ledger query "SELECT ..."              run your own SQL (an AI agent's), with the same checks as ask
 //	ledger serve [--addr 127.0.0.1:8080]   the web app
 //
 // Common flags: --db (default data/ledger.duckdb), --no-llm, --json.
@@ -29,6 +33,7 @@ import (
 
 	"github.com/YUStulinu/Ledger/server/internal/api"
 	"github.com/YUStulinu/Ledger/server/internal/app"
+	"github.com/YUStulinu/Ledger/server/internal/ask"
 	"github.com/YUStulinu/Ledger/server/internal/category"
 	"github.com/YUStulinu/Ledger/server/internal/forecast"
 	"github.com/YUStulinu/Ledger/server/internal/store"
@@ -57,6 +62,7 @@ func main() {
 	month := fs.String("month", "", "transactions: only this month (YYYY-MM)")
 	uncategorized := fs.Bool("uncategorized", false, "transactions: only uncategorized ones")
 	labels := fs.String("labels", "", "import: also apply the categories of a synthetic truth.json (for evaluation)")
+	file := fs.String("file", "", `correct: a JSON list of {"key": ..., "category": ...}, applied with one rebuild`)
 	fs.Parse(reorder(args))
 
 	a, err := app.Open(app.Config{DB: *db, NoLLM: *noLLM})
@@ -157,8 +163,12 @@ func main() {
 		})
 
 	case "correct":
+		if *file != "" {
+			correctMany(ctx, a, *file, *asJSON)
+			return
+		}
 		if fs.NArg() != 2 {
-			fatal(fmt.Errorf("correct <key> <category>; categories: %s", strings.Join(category.Assignable(), ", ")))
+			fatal(fmt.Errorf("correct <key> <category>, or correct --file list.json; categories: %s", strings.Join(category.Assignable(), ", ")))
 		}
 		n, err := a.Correct(ctx, fs.Arg(0), fs.Arg(1))
 		if err != nil {
@@ -168,6 +178,9 @@ func main() {
 
 	case "transactions":
 		listTransactions(ctx, a, *cat, *month, *uncategorized, *asJSON)
+
+	case "merchants":
+		listMerchants(ctx, a, *uncategorized, *asJSON)
 
 	case "recurring":
 		rec, _, err := a.Insights(ctx)
@@ -243,17 +256,24 @@ func main() {
 		}
 		out(ans, func() {
 			fmt.Printf("-- %s\n", ans.SQL)
-			tw := tabwriter.NewWriter(os.Stdout, 0, 2, 2, ' ', 0)
-			fmt.Fprintln(tw, strings.ToUpper(strings.Join(ans.Columns, "\t")))
-			for _, row := range ans.Rows {
-				cells := make([]string, len(row))
-				for i, v := range row {
-					cells[i] = cellString(v)
-				}
-				fmt.Fprintln(tw, strings.Join(cells, "\t"))
-			}
-			tw.Flush()
+			printTable(ans.Columns, ans.Rows)
 		})
+
+	case "schema":
+		fmt.Print(ask.Prompt(a.DataEnd(ctx)))
+
+	case "query":
+		// The same checks and read-only run as ask, for SQL written elsewhere (by an AI agent): one
+		// SELECT over the four views, no table functions, rolled back, 10 s and 500 rows at most.
+		q := strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(strings.Join(fs.Args(), " ")), ";"))
+		if q == "" {
+			fatal(fmt.Errorf(`query "SELECT ..." (ledger schema lists the views)`))
+		}
+		cols, rows, err := ask.Run(ctx, a.Store.DB, q)
+		if err != nil {
+			fatal(err)
+		}
+		out(map[string]any{"sql": q, "columns": cols, "rows": rows}, func() { printTable(cols, rows) })
 
 	case "serve":
 		srv := &http.Server{Addr: *addr, Handler: api.New(a), ReadHeaderTimeout: 10 * time.Second}
@@ -304,6 +324,19 @@ func progress(done, total int) {
 	if done == total {
 		fmt.Fprintln(os.Stderr)
 	}
+}
+
+func printTable(cols []string, rows [][]any) {
+	tw := tabwriter.NewWriter(os.Stdout, 0, 2, 2, ' ', 0)
+	fmt.Fprintln(tw, strings.ToUpper(strings.Join(cols, "\t")))
+	for _, row := range rows {
+		cells := make([]string, len(row))
+		for i, v := range row {
+			cells[i] = cellString(v)
+		}
+		fmt.Fprintln(tw, strings.Join(cells, "\t"))
+	}
+	tw.Flush()
 }
 
 func cellString(v any) string {
@@ -363,6 +396,117 @@ func listTransactions(ctx context.Context, a *app.App, cat, month string, uncate
 	tw.Flush()
 }
 
+// listMerchants lists each merchant once: its category, how many lines, and one line's key and
+// description, which is what deciding a category (and `correct`) needs.
+func listMerchants(ctx context.Context, a *app.App, uncategorized, asJSON bool) {
+	where := "a.type = 'asset' AND t.kind <> 'opening'"
+	if uncategorized {
+		where += " AND t.category = 'Uncategorized'"
+	}
+	rows, err := a.Store.DB.QueryContext(ctx, `SELECT coalesce(t.merchant, ''), t.category, count(*), min(p.line_key), arg_min(b.description, p.line_key)
+		FROM ledger_postings p JOIN ledger_transactions t ON t.id = p.tx_id JOIN ledger_accounts a ON a.name = p.account
+		LEFT JOIN bank_lines b ON b.key = p.line_key
+		WHERE `+where+" GROUP BY 1, 2 ORDER BY 3 DESC, 1")
+	if err != nil {
+		fatal(err)
+	}
+	defer rows.Close()
+	type merchant struct {
+		Merchant    string `json:"merchant"`
+		Category    string `json:"category"`
+		Lines       int    `json:"lines"`
+		Key         string `json:"key"`
+		Description string `json:"description"`
+	}
+	var list []merchant
+	for rows.Next() {
+		var m merchant
+		var key, desc *string
+		if err := rows.Scan(&m.Merchant, &m.Category, &m.Lines, &key, &desc); err != nil {
+			fatal(err)
+		}
+		if key != nil {
+			m.Key = *key
+		}
+		if desc != nil {
+			m.Description = *desc
+		}
+		list = append(list, m)
+	}
+	if err := rows.Err(); err != nil {
+		fatal(err)
+	}
+	if asJSON {
+		json.NewEncoder(os.Stdout).Encode(list)
+		return
+	}
+	tw := tabwriter.NewWriter(os.Stdout, 0, 2, 2, ' ', 0)
+	fmt.Fprintln(tw, "MERCHANT\tCATEGORY\tLINES\tKEY")
+	for _, m := range list {
+		fmt.Fprintf(tw, "%s\t%s\t%d\t%s\n", m.Merchant, m.Category, m.Lines, m.Key)
+	}
+	tw.Flush()
+}
+
+// correctMany applies a list of corrections (an AI agent's, say) and rebuilds the ledger once. Every
+// category is checked before anything is stored; a key that is not found is reported and skipped.
+func correctMany(ctx context.Context, a *app.App, path string, asJSON bool) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		fatal(err)
+	}
+	var list []struct {
+		Key      string `json:"key"`
+		Category string `json:"category"`
+	}
+	if err := json.Unmarshal(data, &list); err != nil {
+		fatal(fmt.Errorf("%s: want a JSON list of {\"key\": ..., \"category\": ...}: %w", path, err))
+	}
+	assignable := map[string]bool{}
+	for _, c := range category.Assignable() {
+		assignable[c] = true
+	}
+	for _, c := range list {
+		if !assignable[c.Category] {
+			fatal(fmt.Errorf("category %q (for %s) cannot be set; categories: %s", c.Category, c.Key, strings.Join(category.Assignable(), ", ")))
+		}
+	}
+	type result struct {
+		Key      string `json:"key"`
+		Category string `json:"category"`
+		Lines    int    `json:"lines"`
+		Error    string `json:"error,omitempty"`
+	}
+	var out []result
+	failed := 0
+	for _, c := range list {
+		n, err := a.Store.Correct(ctx, c.Key, c.Category)
+		r := result{Key: c.Key, Category: c.Category, Lines: n}
+		if err != nil {
+			r.Error, failed = err.Error(), failed+1
+		}
+		out = append(out, r)
+	}
+	if _, err := a.Store.Rebuild(ctx); err != nil {
+		fatal(err)
+	}
+	if asJSON {
+		json.NewEncoder(os.Stdout).Encode(out)
+	} else {
+		lines := 0
+		for _, r := range out {
+			lines += r.Lines
+			if r.Error != "" {
+				fmt.Fprintf(os.Stderr, "%s: %s\n", r.Key, r.Error)
+			}
+		}
+		fmt.Printf("%d corrections, %d transactions relabeled, %d failed\n", len(out)-failed, lines, failed)
+	}
+	if failed > 0 {
+		os.Exit(1)
+	}
+}
+
 // applyTruthLabels labels the lines of the synthetic statements with their true categories (the
 // evaluation uses it to measure questions apart from categorization).
 func applyTruthLabels(ctx context.Context, a *app.App, path string) (int, error) {
@@ -405,11 +549,14 @@ func usage() {
   ledger import <files...>         BT, ING, Revolut statements (CSV or PDF)
   ledger rates <file>              exchange rates (BNR XML or date,currency,ron CSV)
   ledger categorize [--relabel]
-  ledger correct <key> <category>
+  ledger correct <key> <category>  or  ledger correct --file list.json
+  ledger merchants [--uncategorized]
   ledger transactions [--category C] [--month YYYY-MM] [--uncategorized]
   ledger recurring | alerts
   ledger forecast [--days 90] [--from YYYY-MM-DD] [--threshold RON]
   ledger ask "question"
+  ledger schema                    what a query may read
+  ledger query "SELECT ..."        your own SQL, checked and run read-only
   ledger serve [--addr 127.0.0.1:8080]
 
 flags: --db FILE, --no-llm, --json
