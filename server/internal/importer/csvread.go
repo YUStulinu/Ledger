@@ -14,14 +14,19 @@ func records(s string, headerHint string) ([][]string, []int, error) {
 	// Windows line endings confuse the reader's lenient quote handling (a closing quote followed by
 	// a carriage return reads as a literal quote), so normalize them first.
 	s = strings.ReplaceAll(s, "\r\n", "\n")
-	delim := ','
-	for _, line := range strings.Split(s, "\n") {
+	// Without a line naming the hint (a header in another language), the first line decides.
+	delim, decide := ',', ""
+	for i, line := range strings.Split(s, "\n") {
+		if i == 0 {
+			decide = line
+		}
 		if strings.Contains(strings.ToLower(line), strings.ToLower(headerHint)) {
-			if strings.Count(line, ";") > strings.Count(line, ",") {
-				delim = ';'
-			}
+			decide = line
 			break
 		}
+	}
+	if strings.Count(decide, ";") > strings.Count(decide, ",") {
+		delim = ';'
 	}
 	r := csv.NewReader(strings.NewReader(s))
 	r.Comma = delim

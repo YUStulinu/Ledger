@@ -86,7 +86,7 @@ func importAll(t *testing.T) *Store {
 	if err != nil {
 		t.Fatal(err)
 	}
-	parsed, err := ParseRates(rates)
+	parsed, err := ParseRates(rates, "RON")
 	if err != nil {
 		t.Fatal(err)
 	}

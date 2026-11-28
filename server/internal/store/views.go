@@ -2,8 +2,9 @@ package store
 
 // The views that questions are answered from. They are the only names the text-to-SQL prompt
 // describes and the only tables its queries may read, so they are kept few and self-explanatory:
-// every amount comes both in its own currency and converted to RON at that day's rate (the last
-// rate published on or before the date, which is what ASOF JOIN picks).
+// every amount comes both in its own currency and converted to the ledger's base currency at that
+// day's rate (the last rate published on or before the date, which is what ASOF JOIN picks):
+// amount_base. amount_ron is the same column under its old name, from when the base was always RON.
 const views = `
 CREATE OR REPLACE VIEW transactions AS
 WITH lines AS (
@@ -18,6 +19,7 @@ SELECT l.id, l.date, year(l.date) AS year, month(l.date) AS month,
        CAST(date_trunc('month', l.date) AS DATE) AS month_start,
        l.bank, l.account, l.currency,
        CAST(l.amount AS DECIMAL(18, 2)) AS amount,
+       CAST(round(l.amount * coalesce(r.ron, 1), 2) AS DECIMAL(18, 2)) AS amount_base,
        CAST(round(l.amount * coalesce(r.ron, 1), 2) AS DECIMAL(18, 2)) AS amount_ron,
        l.kind, l.category, l.merchant, l.description
 FROM lines l
@@ -25,12 +27,12 @@ ASOF LEFT JOIN rates r ON r.currency = l.currency AND l.date >= r.date;
 
 CREATE OR REPLACE VIEW expenses AS
 SELECT id, date, year, month, month_start, bank, account, currency,
-       -amount AS amount, -amount_ron AS amount_ron, category, merchant, description
+       -amount AS amount, -amount_base AS amount_base, -amount_ron AS amount_ron, category, merchant, description
 FROM transactions
 WHERE kind = 'expense';
 
 CREATE OR REPLACE VIEW income AS
-SELECT id, date, year, month, month_start, bank, account, currency, amount, amount_ron, category, merchant, description
+SELECT id, date, year, month, month_start, bank, account, currency, amount, amount_base, amount_ron, category, merchant, description
 FROM transactions
 WHERE kind = 'income';
 
@@ -44,8 +46,8 @@ GROUP BY ALL;
 
 // The views' columns, for the text-to-SQL prompt and the query checker.
 var ViewColumns = map[string][]string{
-	"transactions": {"id", "date", "year", "month", "month_start", "bank", "account", "currency", "amount", "amount_ron", "kind", "category", "merchant", "description"},
-	"expenses":     {"id", "date", "year", "month", "month_start", "bank", "account", "currency", "amount", "amount_ron", "category", "merchant", "description"},
-	"income":       {"id", "date", "year", "month", "month_start", "bank", "account", "currency", "amount", "amount_ron", "category", "merchant", "description"},
+	"transactions": {"id", "date", "year", "month", "month_start", "bank", "account", "currency", "amount", "amount_base", "amount_ron", "kind", "category", "merchant", "description"},
+	"expenses":     {"id", "date", "year", "month", "month_start", "bank", "account", "currency", "amount", "amount_base", "amount_ron", "category", "merchant", "description"},
+	"income":       {"id", "date", "year", "month", "month_start", "bank", "account", "currency", "amount", "amount_base", "amount_ron", "category", "merchant", "description"},
 	"balances":     {"bank", "account", "currency", "balance"},
 }

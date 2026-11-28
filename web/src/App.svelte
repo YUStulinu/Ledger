@@ -1,5 +1,6 @@
 <script lang="ts">
   import { api, type Category, type Status } from "./lib/api";
+  import { setBase } from "./lib/format";
   import Ask from "./pages/Ask.svelte";
   import Forecast from "./pages/Forecast.svelte";
   import Import from "./pages/Import.svelte";
@@ -35,7 +36,7 @@
   let version = $state(0);
 
   function refresh() {
-    api.status().then((s) => ((status = s), (error = "")), (e) => (error = `The server is not answering: ${e.message}`));
+    api.status().then((s) => ((status = s), setBase(s.base), (error = "")), (e) => (error = `The server is not answering: ${e.message}`));
   }
   $effect(() => {
     refresh();

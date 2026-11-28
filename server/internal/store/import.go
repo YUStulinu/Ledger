@@ -30,6 +30,12 @@ type ImportResult struct {
 // Import reads, verifies and stores a statement file. Importing the same file twice, or files whose
 // periods overlap, adds nothing twice.
 func (s *Store) Import(ctx context.Context, name string, data []byte) (*ImportResult, error) {
+	return s.ImportWith(ctx, name, data, importer.Options{})
+}
+
+// ImportWith imports a file read with options (named columns, date order, currency, account). The
+// first statement imported sets the ledger's base currency, unless one was chosen before.
+func (s *Store) ImportWith(ctx context.Context, name string, data []byte, opt importer.Options) (*ImportResult, error) {
 	sum := sha256.Sum256(data)
 	sha := hex.EncodeToString(sum[:])
 	var prev string
@@ -39,9 +45,19 @@ func (s *Store) Import(ctx context.Context, name string, data []byte) (*ImportRe
 	} else if err != sql.ErrNoRows {
 		return nil, err
 	}
-	st, err := importer.Read(name, data)
+	st, err := importer.ReadWith(name, data, opt)
 	if err != nil {
 		return nil, err
+	}
+	base, err := s.Base(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if base == "" && st.Currency != "" {
+		if err := s.SetBase(ctx, st.Currency, false); err != nil {
+			return nil, err
+		}
+		st.Warnings = append(st.Warnings, fmt.Sprintf("totals will be in %s, this statement's currency (ledger base changes it)", st.Currency))
 	}
 	return s.ImportStatement(ctx, st, name, sha)
 }

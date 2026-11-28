@@ -48,7 +48,9 @@ const maxRows = 500
 func Ask(ctx context.Context, db *sql.DB, model llm.Model, question string, today time.Time) (*Answer, error) {
 	t0 := time.Now()
 	a := &Answer{Question: question}
-	msgs := []llm.Message{{Role: "system", Content: Prompt(today)}, {Role: "user", Content: question}}
+	base := "RON"
+	db.QueryRowContext(ctx, "SELECT value FROM settings WHERE key = 'base'").Scan(&base)
+	msgs := []llm.Message{{Role: "system", Content: Prompt(today, base)}, {Role: "user", Content: question}}
 	for attempt := 0; attempt < 2; attempt++ {
 		var out struct {
 			SQL string `json:"sql"`
@@ -244,22 +246,25 @@ func walk(v any, f func(map[string]any)) {
 func viewNames() []string { return []string{"transactions", "expenses", "income", "balances"} }
 
 // Prompt describes the views to the model, with the conventions and a few examples.
-func Prompt(today time.Time) string {
+func Prompt(today time.Time, base string) string {
+	if base == "" {
+		base = "RON"
+	}
 	var cats []string
 	for _, c := range category.All {
 		cats = append(cats, fmt.Sprintf("'%s' (%s)", c.Name, c.Kind))
 	}
-	return fmt.Sprintf(`You write DuckDB SQL that answers questions about a person's personal finances in Romania.
+	return fmt.Sprintf(`You write DuckDB SQL that answers questions about a person's personal finances.
 Answer with one SELECT query. Today is %s; "this month", "last year" and the like are relative to today.
 Questions may be in Romanian or English. Romanian months: ianuarie=1, februarie=2, martie=3, aprilie=4, mai=5, iunie=6,
 iulie=7, august=8, septembrie=9, octombrie=10, noiembrie=11, decembrie=12.
 
 Tables (views):
-- expenses(id, date DATE, year INT, month INT, month_start DATE, bank, account, currency, amount DECIMAL, amount_ron DECIMAL,
-  category, merchant, description): money spent. amount and amount_ron are POSITIVE for spending (a refund is negative).
-- income(id, date, year, month, month_start, bank, account, currency, amount, amount_ron, category, merchant, description):
+- expenses(id, date DATE, year INT, month INT, month_start DATE, bank, account, currency, amount DECIMAL, amount_base DECIMAL,
+  category, merchant, description): money spent. amount and amount_base are POSITIVE for spending (a refund is negative).
+- income(id, date, year, month, month_start, bank, account, currency, amount, amount_base, category, merchant, description):
   money earned (salary, interest), positive.
-- transactions(id, date, year, month, month_start, bank, account, currency, amount, amount_ron, kind, category, merchant,
+- transactions(id, date, year, month, month_start, bank, account, currency, amount, amount_base, kind, category, merchant,
   description): every movement on a bank account; amount is signed (negative leaves the account); kind is
   'expense', 'income', 'transfer' (between own accounts) or 'exchange' (between currencies).
 - balances(bank, account, currency, balance): current balance of each account, in its own currency.
@@ -281,7 +286,8 @@ Statements write Romanian without diacritics (DOBANDA, not dobândă): never put
 
 Rules:
 - Spending comes from expenses, earnings from income; use transactions only for transfers or signed movements.
-- Totals are in RON: sum amount_ron. Only for "in euros" / "în euro" filter currency = 'EUR' and sum amount (in EUR).
+- Totals are in the base currency, %[3]s: sum amount_base (amount_ron is an old name for the same column). Only for a
+  total in one account currency ("in euros" / "în euro") filter currency = 'EUR' and sum amount.
 - For a range of dates use the date column: date >= DATE '2025-12-01' AND date < DATE '2026-03-01'.
   Never compare month numbers across a year boundary.
 - To group by month use month_start (so that different years stay apart).
@@ -296,16 +302,16 @@ Rules:
 
 Examples:
 Q: Cât am cheltuit pe benzină în 2025?
-{"sql": "SELECT round(sum(amount_ron), 2) AS fuel_ron FROM expenses WHERE category = 'Fuel' AND year = 2025"}
+{"sql": "SELECT round(sum(amount_base), 2) AS fuel FROM expenses WHERE category = 'Fuel' AND year = 2025"}
 Q: How much did I spend per category last month?
-{"sql": "SELECT category, round(sum(amount_ron), 2) AS spent_ron FROM expenses WHERE month_start = date_trunc('month', DATE '%s' - INTERVAL 1 MONTH) GROUP BY category ORDER BY spent_ron DESC"}
+{"sql": "SELECT category, round(sum(amount_base), 2) AS spent FROM expenses WHERE month_start = date_trunc('month', DATE '%s' - INTERVAL 1 MONTH) GROUP BY category ORDER BY spent DESC"}
 Q: Cât am dat pe transport în mai 2026 față de iunie 2026?
-{"sql": "SELECT month_start, round(sum(amount_ron), 2) AS transport_ron FROM expenses WHERE category = 'Transport' AND month_start IN (DATE '2026-05-01', DATE '2026-06-01') GROUP BY month_start ORDER BY month_start"}
+{"sql": "SELECT month_start, round(sum(amount_base), 2) AS transport FROM expenses WHERE category = 'Transport' AND month_start IN (DATE '2026-05-01', DATE '2026-06-01') GROUP BY month_start ORDER BY month_start"}
 Q: How much do I spend on restaurants per month on average?
-{"sql": "SELECT round(avg(total), 2) AS avg_monthly_ron FROM (SELECT month_start, sum(amount_ron) AS total FROM expenses WHERE category = 'Restaurants' GROUP BY month_start)"}
+{"sql": "SELECT round(avg(total), 2) AS avg_monthly FROM (SELECT month_start, sum(amount_base) AS total FROM expenses WHERE category = 'Restaurants' GROUP BY month_start)"}
 Q: Cât am câștigat net în 2026 (venituri minus cheltuieli)?
-{"sql": "SELECT round((SELECT sum(amount_ron) FROM income WHERE year = 2026) - (SELECT sum(amount_ron) FROM expenses WHERE year = 2026), 2) AS net_ron"}
+{"sql": "SELECT round((SELECT sum(amount_base) FROM income WHERE year = 2026) - (SELECT sum(amount_base) FROM expenses WHERE year = 2026), 2) AS net"}
 Q: How often did I pay at Lidl or Profi between November 2025 and January 2026?
 {"sql": "SELECT count(*) AS payments FROM expenses WHERE (merchant ILIKE '%%LIDL%%' OR merchant ILIKE '%%PROFI%%') AND date >= DATE '2025-11-01' AND date < DATE '2026-02-01'"}
-`, today.Format("2006-01-02"), strings.Join(cats, ", "), today.Format("2006-01-02"))
+`, today.Format("2006-01-02"), strings.Join(cats, ", "), base, today.Format("2006-01-02"))
 }

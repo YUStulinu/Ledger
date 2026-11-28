@@ -1,6 +1,6 @@
 <script lang="ts">
   import { api, ApiError, type Answer, type Status } from "../lib/api";
-  import { money } from "../lib/format";
+  import { base, money } from "../lib/format";
 
   let { status }: { status: Status | null } = $props();
 
@@ -43,7 +43,7 @@
   const moneyCol = (name: string) => /ron|amount|spent|total|cost|sum|income|net|eur|avg|average|balance/i.test(name);
   function cell(v: unknown, col: string): string {
     if (v === null || v === undefined) return "—";
-    if (typeof v === "number") return moneyCol(col) ? money(v, /eur/i.test(col) ? "EUR" : "RON") : String(v);
+    if (typeof v === "number") return moneyCol(col) ? money(v, /eur/i.test(col) ? "EUR" : base()) : String(v);
     return String(v).replace(/T00:00:00Z$/, "");
   }
 </script>

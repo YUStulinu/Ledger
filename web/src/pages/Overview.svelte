@@ -1,7 +1,7 @@
 <script lang="ts">
   import { api, type Overview, type Status } from "../lib/api";
   import { color } from "../lib/colors";
-  import { money, monthLabel } from "../lib/format";
+  import { base, money, monthLabel } from "../lib/format";
   import StackedBars from "../lib/StackedBars.svelte";
   import TimeChart from "../lib/TimeChart.svelte";
 
@@ -62,7 +62,7 @@
   {#if kpi}
     <div class="kpis">
       <div class="card kpi">
-        <span class="label">Net worth (RON)</span>
+        <span class="label">Net worth ({base()})</span>
         <span class="value">{money(kpi.net)}</span>
         <span class="muted">all accounts, EUR converted at BNR rates</span>
       </div>
@@ -121,7 +121,7 @@
     </section>
 
     <section class="card wide">
-      <header><h2>Balance history</h2><span class="muted">all accounts, in RON</span></header>
+      <header><h2>Balance history</h2><span class="muted">all accounts, in {base()}</span></header>
       {#if data.balance_history?.length}
         <TimeChart
           dates={data.balance_history.map((d) => d.date)}

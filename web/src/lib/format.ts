@@ -1,8 +1,17 @@
 const ron = new Intl.NumberFormat("ro-RO", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const whole = new Intl.NumberFormat("ro-RO", { maximumFractionDigits: 0 });
 
-/** 1234.5 -> "1.234,50 RON" */
-export function money(amount: number, currency = "RON"): string {
+// The ledger's base currency (from the server's status), the one totals are in.
+let baseCurrency = "RON";
+export function setBase(c: string) {
+  if (c) baseCurrency = c;
+}
+export function base(): string {
+  return baseCurrency;
+}
+
+/** 1234.5 -> "1.234,50 EUR" (in the base currency unless another is named) */
+export function money(amount: number, currency = baseCurrency): string {
   return `${ron.format(amount)} ${currency}`;
 }
 

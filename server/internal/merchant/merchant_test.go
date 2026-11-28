@@ -107,3 +107,17 @@ func TestKeysAreStableAcrossStatements(t *testing.T) {
 		}
 	}
 }
+
+// Banks outside Romania: the wording around the other party's name goes.
+func TestExtractGeneric(t *testing.T) {
+	for in, want := range map[string]string{
+		"Card transaction of 42.10 EUR issued by Albert Heijn": "Albert Heijn",
+		"Received money from ACME BV":                          "ACME BV",
+		"PURCHASE AUTHORIZED ON 11/27 STARBUCKS STORE 1234":    "STARBUCKS STORE 1234",
+		"NETFLIX.COM": "NETFLIX.COM",
+	} {
+		if got := Extract("Wise", in); got != want {
+			t.Errorf("Extract(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

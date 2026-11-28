@@ -1,6 +1,6 @@
 <script lang="ts">
   import { api, type Forecast, type Status } from "../lib/api";
-  import { day, money } from "../lib/format";
+  import { base, day, money } from "../lib/format";
   import TimeChart from "../lib/TimeChart.svelte";
 
   let { status }: { status: Status | null } = $props();
@@ -70,7 +70,7 @@
         <option value={90}>3 months</option>
       </select>
     </label>
-    <label>Warn below <input type="number" min="0" step="500" bind:value={threshold} /> RON</label>
+    <label>Warn below <input type="number" min="0" step="500" bind:value={threshold} /> {base()}</label>
     <label class="check"><input type="checkbox" bind:checked={backtest} /> Backtest: forecast from {days} days before the data ends</label>
     {#if loading}<span class="muted small">Simulating…</span>{/if}
   </div>

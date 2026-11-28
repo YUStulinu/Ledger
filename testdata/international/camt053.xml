@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.02">
+ <BkToCstmrStmt>
+  <GrpHdr><MsgId>MSG1</MsgId><CreDtTm>2026-12-01T08:00:00</CreDtTm></GrpHdr>
+  <Stmt>
+   <Id>STMT-2026-11</Id>
+   <Acct><Id><IBAN>DE89370400440532013000</IBAN></Id><Ccy>EUR</Ccy><Svcr><FinInstnId><BIC>COBADEFFXXX</BIC><Nm>Commerzbank</Nm></FinInstnId></Svcr></Acct>
+   <Bal><Tp><CdOrPrtry><Cd>OPBD</Cd></CdOrPrtry></Tp><Amt Ccy="EUR">1000.00</Amt><CdtDbtInd>CRDT</CdtDbtInd><Dt><Dt>2026-10-31</Dt></Dt></Bal>
+   <Bal><Tp><CdOrPrtry><Cd>CLBD</Cd></CdOrPrtry></Tp><Amt Ccy="EUR">2933.40</Amt><CdtDbtInd>CRDT</CdtDbtInd><Dt><Dt>2026-11-30</Dt></Dt></Bal>
+   <Ntry><Amt Ccy="EUR">2800.00</Amt><CdtDbtInd>CRDT</CdtDbtInd><Sts>BOOK</Sts><BookgDt><Dt>2026-11-01</Dt></BookgDt>
+    <NtryDtls><TxDtls><RltdPties><Dbtr><Nm>ACME GmbH</Nm></Dbtr></RltdPties><RmtInf><Ustrd>Gehalt November</Ustrd></RmtInf></TxDtls></NtryDtls></Ntry>
+   <Ntry><Amt Ccy="EUR">850.00</Amt><CdtDbtInd>DBIT</CdtDbtInd><Sts>BOOK</Sts><BookgDt><Dt>2026-11-03</Dt></BookgDt>
+    <NtryDtls><TxDtls><RltdPties><Cdtr><Nm>Hausverwaltung Schmidt</Nm></Cdtr></RltdPties><RmtInf><Ustrd>Miete November</Ustrd></RmtInf></TxDtls></NtryDtls></Ntry>
+   <Ntry><Amt Ccy="EUR">16.60</Amt><CdtDbtInd>DBIT</CdtDbtInd><Sts>BOOK</Sts><BookgDt><Dt>2026-11-12</Dt></BookgDt><AddtlNtryInf>REWE SAGT DANKE 4711</AddtlNtryInf></Ntry>
+   <Ntry><Amt Ccy="EUR">99.00</Amt><CdtDbtInd>DBIT</CdtDbtInd><Sts>PDNG</Sts><BookgDt><Dt>2026-11-30</Dt></BookgDt><AddtlNtryInf>PENDING ORDER</AddtlNtryInf></Ntry>
+  </Stmt>
+ </BkToCstmrStmt>
+</Document>

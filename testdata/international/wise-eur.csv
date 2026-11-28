@@ -1,0 +1,4 @@
+"TransferWise ID",Date,Amount,Currency,Description,"Payment Reference","Running Balance","Exchange From","Exchange To","Exchange Rate","Payer Name","Payee Name","Payee Account Number",Merchant,"Card Last Four Digits","Card Holder Full Name",Attachment,Note,"Total fees"
+CARD-1003,28-11-2026,-42.10,EUR,"Card transaction of 42.10 EUR issued by Albert Heijn",,2857.90,,,,,,,"Albert Heijn",1234,"Alex Morgan",,,0.00
+TRANSFER-1002,25-11-2026,2400.00,EUR,"Received money from ACME BV",SALARY NOV,2900.00,,,,"ACME BV",,,,,,,,0.00
+CARD-1001,20-11-2026,-12.99,EUR,"Card transaction of 12.99 EUR issued by Netflix",,500.00,,,,,,,"Netflix",1234,"Alex Morgan",,,0.00

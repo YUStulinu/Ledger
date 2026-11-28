@@ -6,6 +6,7 @@ export interface Status {
   llm: boolean;
   data_end: string;
   model: string;
+  base: string;
 }
 
 export interface Category {

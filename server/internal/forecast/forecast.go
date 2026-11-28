@@ -68,7 +68,7 @@ type Options struct {
 	From time.Time
 }
 
-// Run forecasts the total balance (all accounts, in RON) from the end of the data, or backtests
+// Run forecasts the total balance (all accounts, in the base currency) from the end of the data, or backtests
 // from opt.From.
 func Run(ctx context.Context, db *sql.DB, py *ml.Bridge, opt Options) (*Result, error) {
 	if opt.Days == 0 {
@@ -151,7 +151,7 @@ type Day struct {
 	RON  float64   `json:"ron"`
 }
 
-// DailyBalances is the total balance (in RON, at each day's rate) for every day from the first
+// DailyBalances is the total balance (in the base currency, at each day's rate) for every day from the first
 // opening to the last transaction.
 func DailyBalances(ctx context.Context, db *sql.DB) ([]Day, error) {
 	rows, err := db.QueryContext(ctx, `SELECT t.date, p.currency, sum(p.amount) FROM ledger_postings p
@@ -200,8 +200,11 @@ func DailyBalances(ctx context.Context, db *sql.DB) ([]Day, error) {
 		}{d, v})
 	}
 	rr.Close()
+	// The ledger's base currency (worth 1); a ledger from before there was a choice is in RON.
+	base := "RON"
+	db.QueryRowContext(ctx, "SELECT value FROM settings WHERE key = 'base'").Scan(&base)
 	rateOn := func(cur string, d time.Time) float64 {
-		if cur == "RON" {
+		if cur == base {
 			return 1
 		}
 		rs := rates[cur]

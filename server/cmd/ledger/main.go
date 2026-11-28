@@ -1,7 +1,12 @@
 // ledger: your personal accountant, from your bank statements, on your own machine.
 //
-//	ledger import <statement files...>     read, check and store statements (BT, ING, Revolut; CSV or PDF)
-//	ledger rates <file>                    exchange rates (the BNR's XML, or date,currency,ron CSV)
+//	ledger import <statement files...>     read, check and store statements: any bank's CSV, camt.053 XML or
+//	                                       OFX/QFX; BT, ING and Revolut exports and BT PDFs. For a CSV it does not
+//	                                       recognize: --map date=Col,amount=Col,... and --date-format, --currency,
+//	                                       --account, --flip-sign
+//	ledger base [CUR] [--reset-rates]      the currency totals are in (set by the first import; EUR, USD, GBP...)
+//	ledger rates <file> | --fetch          exchange rates: --fetch downloads the European Central Bank's; or a file
+//	                                       (the ECB's or the BNR's, or date,currency,value CSV in the base currency)
 //	ledger categorize [--relabel]          sort what is not sorted yet
 //	ledger correct <key> <category>        set a category by hand (for every transaction of that merchant)
 //	ledger correct --file list.json        many corrections at once ([{"key", "category"}]), one rebuild
@@ -36,6 +41,7 @@ import (
 	"github.com/YUStulinu/Ledger/server/internal/ask"
 	"github.com/YUStulinu/Ledger/server/internal/category"
 	"github.com/YUStulinu/Ledger/server/internal/forecast"
+	"github.com/YUStulinu/Ledger/server/internal/importer"
 	"github.com/YUStulinu/Ledger/server/internal/store"
 )
 
@@ -63,6 +69,13 @@ func main() {
 	uncategorized := fs.Bool("uncategorized", false, "transactions: only uncategorized ones")
 	labels := fs.String("labels", "", "import: also apply the categories of a synthetic truth.json (for evaluation)")
 	file := fs.String("file", "", `correct: a JSON list of {"key": ..., "category": ...}, applied with one rebuild`)
+	mapCols := fs.String("map", "", "import: name a CSV's columns, e.g. date=Posting Date,amount=Amount,description=Payee")
+	dateFormat := fs.String("date-format", "", "import: DMY, MDY, YMD or a Go layout, when a CSV's dates are ambiguous")
+	currency := fs.String("currency", "", "import: the account's currency when the file does not say it")
+	account := fs.String("account", "", "import: a name for the account when the file does not give one")
+	flipSign := fs.Bool("flip-sign", false, "import: positive amounts are money out (credit-card exports)")
+	fetch := fs.Bool("fetch", false, "rates: download the European Central Bank's rates")
+	resetRates := fs.Bool("reset-rates", false, "base: drop the stored rates (they are in the old base)")
 	fs.Parse(reorder(args))
 
 	a, err := app.Open(app.Config{DB: *db, NoLLM: *noLLM})
@@ -94,7 +107,18 @@ func main() {
 				fatal(err)
 			}
 			name := filepath.Base(f)
-			r, err := a.Store.Import(ctx, name, data)
+			opt := importer.Options{DateFormat: *dateFormat, Currency: *currency, Account: *account, FlipSign: *flipSign}
+			if *mapCols != "" {
+				opt.Map = map[string]string{}
+				for _, kv := range strings.Split(*mapCols, ",") {
+					k, v, ok := strings.Cut(kv, "=")
+					if !ok {
+						fatal(fmt.Errorf("--map wants field=Column pairs separated by commas, not %q", kv))
+					}
+					opt.Map[strings.ToLower(strings.TrimSpace(k))] = strings.TrimSpace(v)
+				}
+			}
+			r, err := a.Store.ImportWith(ctx, name, data, opt)
 			if err != nil {
 				fatal(err)
 			}
@@ -124,18 +148,46 @@ func main() {
 				rep.Rules, rep.Corrections, rep.Model, rep.LLM, rep.Merchants, rep.Left)
 		})
 		if missing, _ := a.Store.MissingRates(ctx); len(missing) > 0 {
-			fmt.Fprintf(os.Stderr, "note: no exchange rates for %s yet: `ledger rates <file>` (the BNR publishes them)\n", strings.Join(missing, ", "))
+			fmt.Fprintf(os.Stderr, "note: no exchange rates for %s yet: `ledger rates --fetch` downloads the European Central Bank's\n", strings.Join(missing, ", "))
 		}
 
-	case "rates":
-		if fs.NArg() != 1 {
-			fatal(fmt.Errorf("rates: name the file"))
+	case "base":
+		if fs.NArg() == 1 {
+			if err := a.Store.SetBase(ctx, fs.Arg(0), *resetRates); err != nil {
+				fatal(err)
+			}
+			if _, err := a.Store.Rebuild(ctx); err != nil {
+				fatal(err)
+			}
 		}
-		data, err := os.ReadFile(fs.Arg(0))
+		base, err := a.Store.Base(ctx)
 		if err != nil {
 			fatal(err)
 		}
-		rates, err := store.ParseRates(data)
+		out(map[string]string{"base": base}, func() { fmt.Println(base) })
+
+	case "rates":
+		var data []byte
+		var err error
+		switch {
+		case *fetch:
+			data, err = store.FetchECB(ctx)
+		case fs.NArg() == 1:
+			data, err = os.ReadFile(fs.Arg(0))
+		default:
+			fatal(fmt.Errorf("rates: --fetch, or name the file"))
+		}
+		if err != nil {
+			fatal(err)
+		}
+		base, err := a.Store.Base(ctx)
+		if err != nil {
+			fatal(err)
+		}
+		if base == "" {
+			fatal(fmt.Errorf("rates: import a statement first, or set the base currency (ledger base EUR)"))
+		}
+		rates, err := store.ParseRates(data, base)
 		if err != nil {
 			fatal(err)
 		}
@@ -260,7 +312,8 @@ func main() {
 		})
 
 	case "schema":
-		fmt.Print(ask.Prompt(a.DataEnd(ctx)))
+		base, _ := a.Store.Base(ctx)
+		fmt.Print(ask.Prompt(a.DataEnd(ctx), base))
 
 	case "query":
 		// The same checks and read-only run as ask, for SQL written elsewhere (by an AI agent): one
@@ -313,7 +366,7 @@ func reorder(args []string) []string {
 
 func takesValue(f string) bool {
 	switch strings.TrimLeft(f, "-") {
-	case "no-llm", "json", "relabel", "uncategorized":
+	case "no-llm", "json", "relabel", "uncategorized", "flip-sign", "fetch", "reset-rates":
 		return false
 	}
 	return true
@@ -546,8 +599,10 @@ func applyTruthLabels(ctx context.Context, a *app.App, path string) (int, error)
 func usage() {
 	fmt.Fprint(os.Stderr, `ledger: your personal accountant, from your bank statements
 
-  ledger import <files...>         BT, ING, Revolut statements (CSV or PDF)
-  ledger rates <file>              exchange rates (BNR XML or date,currency,ron CSV)
+  ledger import <files...>         any bank's CSV, camt.053 or OFX/QFX; BT, ING, Revolut exports and BT PDFs
+                                   (--map date=Col,amount=Col,... --date-format DMY|MDY --currency EUR --flip-sign)
+  ledger base [CUR]                the currency totals are in
+  ledger rates --fetch | <file>    exchange rates (the ECB's, downloaded; or an ECB/BNR file)
   ledger categorize [--relabel]
   ledger correct <key> <category>  or  ledger correct --file list.json
   ledger merchants [--uncategorized]

@@ -51,6 +51,7 @@ jobs:
           cp server/bin/${{ matrix.exe }} README.md LICENSE "$name/"
           [ "$RUNNER_OS" = "Windows" ] && cp server/bin/duckdb.dll "$name/"
           cp -r ml/ledger_ml ml/requirements.txt "$name/ml/"
+          cp -r testdata/international "$name/samples"
           find "$name" -name __pycache__ -prune -exec rm -rf {} +
       - name: Check the packaged program on the test statements
         # From a folder outside the repository, so that the program must find the packaged ml/.
@@ -65,6 +66,14 @@ jobs:
           grep -q '1071' q.json
           "$exe" forecast --days 30
           test -f "$(dirname "$exe")/data/ledger.duckdb"
+          # Banks from elsewhere, in their own ledger: camt.053, OFX and CSV exports, totals in EUR.
+          s="$(dirname "$exe")/samples"
+          "$exe" import $s/camt053.xml $s/bank.ofx $s/wise-eur.csv $s/monzo-gbp.csv --no-llm --db intl.duckdb
+          "$exe" import $s/chase-checking.csv --currency USD --no-llm --db intl.duckdb
+          "$exe" base --db intl.duckdb | grep -qx EUR
+          "$exe" rates $s/ecb-sample.csv --db intl.duckdb
+          "$exe" query "SELECT count(*) AS lines, count(DISTINCT account) AS accounts FROM transactions" --json --db intl.duckdb | tee i.json
+          python -c "import json; assert json.load(open('i.json'))['rows'] == [[15, 5]]"
           rm -rf "$(dirname "$exe")/data"
       - name: Archive
         run: |

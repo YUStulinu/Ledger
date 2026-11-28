@@ -1,5 +1,6 @@
-// Package importer reads bank statements (BT, ING and Revolut CSV exports, BT PDF statements) into
-// a common shape, and checks them.
+// Package importer reads bank statements into a common shape, and checks them: BT, ING and Revolut
+// CSV exports and BT PDF statements; any bank's camt.053 XML and OFX/QFX files; and any CSV with a
+// date and an amount (or debit and credit) column, recognized by name or named by the caller.
 //
 // Every statement that carries balances is verified: the running balance after each row must equal
 // the previous one plus the row's amount, and the opening balance plus all rows must give the
@@ -39,7 +40,7 @@ type Row struct {
 // Statement is one imported file.
 type Statement struct {
 	Bank    string // "BT", "ING", "Revolut"
-	Format  string // "bt-csv", "ing-csv", "revolut-csv", "bt-pdf", "mapped-csv"
+	Format  string // "bt-csv", "ing-csv", "revolut-csv", "bt-pdf", "camt053", "ofx", "generic-csv", "mapped-csv"
 	Account string // the IBAN, or the bank's name when the file does not say
 	Owner   string
 	// Currency of the account (Revolut statements mix currencies: each row has its own).
@@ -58,19 +59,35 @@ type Parser interface {
 	Parse(data []byte) (*Statement, error)
 }
 
-// Parsers lists the known formats, most specific first.
-var Parsers = []Parser{revolutCSV{}, btCSV{}, ingCSV{}, btPDF{}}
+// Parsers lists the known formats, most specific first; any CSV with a date and an amount comes last.
+var Parsers = []Parser{revolutCSV{}, btCSV{}, ingCSV{}, btPDF{}, camt053{}, ofx{}, genericCSV{}}
 
 // ErrUnknownFormat means no parser recognized the file (the caller may try mapping its columns).
 var ErrUnknownFormat = fmt.Errorf("unknown statement format")
 
 // Read detects the format of a file and parses and verifies it.
-func Read(name string, data []byte) (*Statement, error) {
-	for _, p := range Parsers {
+func Read(name string, data []byte) (*Statement, error) { return ReadWith(name, data, Options{}) }
+
+// ReadWith reads a file with options: named columns (which select the generic CSV reader), the
+// date order, the currency and the account name when the file does not give them.
+func ReadWith(name string, data []byte, o Options) (*Statement, error) {
+	parsers := Parsers
+	if len(o.Map) > 0 {
+		parsers = []Parser{genericCSV{o}}
+	} else if o.DateFormat != "" || o.Currency != "" || o.FlipSign {
+		parsers = append(append([]Parser{}, Parsers[:len(Parsers)-1]...), genericCSV{o})
+	}
+	for _, p := range parsers {
 		if p.Detect(name, data) {
 			st, err := p.Parse(data)
 			if err != nil {
 				return nil, fmt.Errorf("%s (%s): %w", name, p.Name(), err)
+			}
+			if o.Account != "" {
+				st.Account = o.Account
+			}
+			if o.Currency != "" && st.Currency == "" {
+				st.Currency = strings.ToUpper(o.Currency)
 			}
 			if err := Verify(st); err != nil {
 				return nil, fmt.Errorf("%s (%s): %w", name, p.Name(), err)

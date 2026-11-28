@@ -33,9 +33,26 @@ func Extract(bank, description string) string {
 		return extractBT(d)
 	case "ING":
 		return extractING(d)
-	default: // Revolut and anything else: the description is the merchant
-		return d
+	default: // Revolut and anything else: the description, without the wording banks put around it
+		return extractGeneric(d)
 	}
+}
+
+// The wording English-language banks and apps put around the other party's name: "Card
+// transaction of 12.99 EUR issued by Netflix" (Wise), "PURCHASE AUTHORIZED ON 11/27 STARBUCKS"
+// (US banks), "Received money from ACME BV".
+var genericWrappers = []*regexp.Regexp{
+	regexp.MustCompile(`(?i)^card transaction of [\d.,]+ [A-Z]{3} issued by\s+`),
+	regexp.MustCompile(`(?i)^(received money from|sent money to|money added from|transfer (?:to|from)|payment (?:to|from))\s+`),
+	regexp.MustCompile(`(?i)^(purchase authorized on|recurring payment authorized on|debit card purchase|pos purchase|pos|visa debit|card payment to|direct debit to|direct debit)\s+(\d{2}/\d{2}\s+)?`),
+	regexp.MustCompile(`(?i)\s+card\s+\d{4}$`),
+}
+
+func extractGeneric(d string) string {
+	for _, re := range genericWrappers {
+		d = strings.TrimSpace(re.ReplaceAllString(d, ""))
+	}
+	return d
 }
 
 func extractBT(d string) string {

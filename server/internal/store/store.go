@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	_ "github.com/duckdb/duckdb-go/v2" // the "duckdb" database/sql driver
 )
@@ -44,6 +45,55 @@ func Open(path string) (*Store, error) {
 }
 
 func (s *Store) Close() error { return s.DB.Close() }
+
+// Base is the currency every total is converted to: chosen with SetBase, or the currency of the
+// first statement imported. A ledger made before there was a choice is in RON. "" means not yet
+// known (nothing imported).
+func (s *Store) Base(ctx context.Context) (string, error) {
+	var v string
+	err := s.DB.QueryRowContext(ctx, "SELECT value FROM settings WHERE key = 'base'").Scan(&v)
+	if err == nil {
+		return v, nil
+	}
+	if err != sql.ErrNoRows {
+		return "", err
+	}
+	var n int
+	if err := s.DB.QueryRowContext(ctx, "SELECT count(*) FROM bank_lines").Scan(&n); err != nil {
+		return "", err
+	}
+	if n > 0 {
+		return "RON", nil
+	}
+	return "", nil
+}
+
+// SetBase sets the base currency. Stored exchange rates are values in the old base, so changing it
+// needs them gone (resetRates), to be loaded again for the new base.
+func (s *Store) SetBase(ctx context.Context, cur string, resetRates bool) error {
+	cur = strings.ToUpper(strings.TrimSpace(cur))
+	if len(cur) != 3 {
+		return fmt.Errorf("a currency is a three-letter code (EUR, USD, GBP, RON...), not %q", cur)
+	}
+	old, err := s.Base(ctx)
+	if err != nil {
+		return err
+	}
+	if old != "" && old != cur {
+		var n int
+		if err := s.DB.QueryRowContext(ctx, "SELECT count(*) FROM rates").Scan(&n); err != nil {
+			return err
+		}
+		if n > 0 && !resetRates {
+			return fmt.Errorf("the exchange rates stored are in %s: add --reset-rates to drop them, then load rates again (ledger rates --fetch)", old)
+		}
+		if _, err := s.DB.ExecContext(ctx, "DELETE FROM rates"); err != nil {
+			return err
+		}
+	}
+	_, err = s.DB.ExecContext(ctx, "INSERT INTO settings VALUES ('base', ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value", cur)
+	return err
+}
 
 const schema = `
 CREATE TABLE IF NOT EXISTS bank_lines (
@@ -100,8 +150,12 @@ CREATE TABLE IF NOT EXISTS corrections (
 CREATE TABLE IF NOT EXISTS rates (
 	date     DATE,
 	currency VARCHAR,
-	ron      DOUBLE,
+	ron      DOUBLE, -- the value of one unit in the ledger's base currency (named when RON was the only base)
 	PRIMARY KEY (date, currency)
+);
+CREATE TABLE IF NOT EXISTS settings (
+	key   VARCHAR PRIMARY KEY,
+	value VARCHAR
 );
 CREATE TABLE IF NOT EXISTS ledger_accounts (
 	name     VARCHAR PRIMARY KEY,

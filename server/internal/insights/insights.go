@@ -21,8 +21,9 @@ type Tx struct {
 	Date     time.Time `json:"date"`
 	Account  string    `json:"account"`
 	Currency string    `json:"currency"`
-	Amount   float64   `json:"amount"` // signed, own currency
-	RON      float64   `json:"amount_ron"`
+	Amount   float64   `json:"amount"`     // signed, own currency
+	RON      float64   `json:"amount_ron"` // in the base currency (the name is from when it was always RON)
+	Base     float64   `json:"amount_base"`
 	Kind     string    `json:"kind"`
 	Category string    `json:"category"`
 	Merchant string    `json:"merchant"`
@@ -45,6 +46,7 @@ func Load(ctx context.Context, db *sql.DB) ([]Tx, error) {
 			return nil, err
 		}
 		t.key = merchant.Key(t.Merchant)
+		t.Base = t.RON
 		out = append(out, t)
 	}
 	return out, rows.Err()
@@ -54,21 +56,23 @@ func Load(ctx context.Context, db *sql.DB) ([]Tx, error) {
 
 // Recurring is a payment (or income) that comes back on a schedule.
 type Recurring struct {
-	Merchant  string    `json:"merchant"`
-	Category  string    `json:"category"`
-	Currency  string    `json:"currency"`
-	Cadence   string    `json:"cadence"` // weekly, monthly, yearly
-	Count     int       `json:"count"`
-	First     time.Time `json:"first"`
-	Last      time.Time `json:"last"`
-	Next      time.Time `json:"next"`
-	Amount    float64   `json:"amount"` // the latest, signed
-	Typical   float64   `json:"typical"`
-	YearlyRON float64   `json:"yearly_ron"` // what a year of it costs (negative) or brings
+	Merchant   string    `json:"merchant"`
+	Category   string    `json:"category"`
+	Currency   string    `json:"currency"`
+	Cadence    string    `json:"cadence"` // weekly, monthly, yearly
+	Count      int       `json:"count"`
+	First      time.Time `json:"first"`
+	Last       time.Time `json:"last"`
+	Next       time.Time `json:"next"`
+	Amount     float64   `json:"amount"` // the latest, signed
+	Typical    float64   `json:"typical"`
+	YearlyRON  float64   `json:"yearly_ron"`  // what a year of it costs (negative) or brings, in the base currency
+	YearlyBase float64   `json:"yearly_base"` // the same, under the name that says so
 	// One occurrence in RON (the average of the last three), for the forecast.
-	TypicalRON float64 `json:"typical_ron"`
-	Active     bool    `json:"active"`
-	Income     bool    `json:"income"`
+	TypicalRON  float64 `json:"typical_ron"`
+	TypicalBase float64 `json:"typical_base"`
+	Active      bool    `json:"active"`
+	Income      bool    `json:"income"`
 	// A price change: the amount before it and when it happened.
 	PreviousAmount float64    `json:"previous_amount,omitempty"`
 	ChangedOn      *time.Time `json:"changed_on,omitempty"`
@@ -160,6 +164,7 @@ func FindRecurring(txs []Tx, today time.Time) []Recurring {
 			ron /= float64(min(3, len(g)))
 			r.TypicalRON = ron
 			r.YearlyRON = ron * 365.25 / c.period
+			r.TypicalBase, r.YearlyBase = r.TypicalRON, r.YearlyRON
 			r.PreviousAmount, r.ChangedOn = priceChange(g)
 			out = append(out, r)
 			break

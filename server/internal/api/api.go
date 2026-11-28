@@ -87,11 +87,15 @@ func fail(w http.ResponseWriter, code int, err error) {
 func (s *Server) status(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	var lines, uncategorized int
+	base, _ := s.App.Store.Base(ctx)
+	if base == "" {
+		base = "RON"
+	}
 	s.App.Store.DB.QueryRowContext(ctx, "SELECT count(*) FROM bank_lines").Scan(&lines)
 	s.App.Store.DB.QueryRowContext(ctx, "SELECT count(*) FROM ledger_transactions WHERE category = 'Uncategorized'").Scan(&uncategorized)
 	writeJSON(w, map[string]any{
 		"lines": lines, "uncategorized": uncategorized, "llm": s.App.ModelAvailable(), "data_end": s.App.DataEnd(ctx).Format("2006-01-02"),
-		"model": shortName(s.App.Cfg.Model),
+		"model": shortName(s.App.Cfg.Model), "base": base,
 	})
 }
 

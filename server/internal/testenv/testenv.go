@@ -97,7 +97,7 @@ func Ledger(t testing.TB, trueLabels bool) (*store.Store, *Truth) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	parsed, err := store.ParseRates(rates)
+	parsed, err := store.ParseRates(rates, "RON")
 	if err != nil {
 		t.Fatal(err)
 	}

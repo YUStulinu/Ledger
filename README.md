@@ -1,7 +1,10 @@
 # Ledger
 
 Your personal accountant, running on your own machine. Ledger reads the statements you download from
-**Banca Transilvania, ING and Revolut** (CSV or PDF) and turns them into a **double-entry ledger**:
+**any bank**: CSV exports (Wise, Monzo, N26, Chase and the rest), **camt.053** XML (most European
+banks) and **OFX/QFX** (US and Canadian banks, Quicken), with built-in readers for Banca
+Transilvania, ING Romania and Revolut (CSV, and PDF for BT). It turns them into a **double-entry
+ledger** in the currency you choose (EUR, USD, GBP, RON...):
 
 - every transaction gets a **category**. A local language model sorts the merchants it has not seen,
   and Ledger **learns from your corrections**: fixing one KAUFLAND payment fixes all of them, and
@@ -43,8 +46,13 @@ On Windows, run the scripts from Git Bash. The program is `server/bin/ledger.exe
 Then drop your statements on the **Import** page, or use the command line:
 
 ```text
-ledger import <files...>        read, check and store statements (re-importing is harmless)
-ledger rates <file>             exchange rates: the BNR's XML (nbrfxrates.xml) or date,currency,ron CSV
+ledger import <files...>        read, check and store statements (re-importing is harmless); for a CSV whose
+                                columns it does not recognize: --map date=Col,amount=Col,description=Col
+                                (or debit=,credit=,balance=,currency=), --date-format DMY|MDY, --currency EUR,
+                                --account "Chase Checking", --flip-sign (positive amounts are money out)
+ledger base [CUR]               the currency totals are in: the first statement's, unless set
+ledger rates --fetch            exchange rates from the European Central Bank (or ledger rates <file>: the
+                                ECB's, the BNR's nbrfxrates.xml, or a date,currency,value CSV in the base)
 ledger categorize [--relabel]   sort what is not sorted yet
 ledger correct <key> <category> set a category by hand, for every transaction of that merchant
 ledger transactions | recurring | alerts | forecast [--days 90] [--from YYYY-MM-DD]
@@ -58,6 +66,11 @@ common flags: --db data/ledger.duckdb   --no-llm   --json
 ```
 
 ### From an AI agent (Claude Code, Codex, Cursor)
+
+The skill that teaches an agent to use Ledger is on
+[Agensi](https://agensi.io/skills/personal-finance-from-romanian-bank-statements). Sample statements
+from banks around the world are in [testdata/international](testdata/international).
+
 
 An agent can do the language model's two jobs itself, so it needs neither the 4.7 GB model nor
 llama.cpp. The [Ledger skill on Agensi](https://agensi.io/skills/personal-finance-from-romanian-bank-statements)
@@ -119,7 +132,27 @@ rules, your corrections and the classifier.
 
 ### Reading statements
 
-Each bank has its own importer (`server/internal/importer`):
+Any bank's statement is read by one of three general importers (`server/internal/importer`):
+
+- **camt.053** (ISO 20022 XML, any schema version): the account's IBAN, booked entries only (pending
+  ones are left out), the other party and the remittance text as the description, and the opening
+  and closing balances, which every file is checked against.
+- **OFX/QFX**, in its old SGML form and its XML form: the closing balance is given, so the opening one
+  is worked out from it (an OFX file cannot be checked against itself).
+- **CSV**: the date, amount (or debit and credit), description, payee, balance and currency columns
+  are recognized by the names banks use, in English and a few other languages, or named with
+  `--map`. Dates are read with the one layout that reads every row; a file whose every date reads
+  both day-first and month-first (03/04/2026) asks for `--date-format`. With a running balance,
+  rows are put in the order it follows (banks export newest first as often as oldest first), and if
+  the balances only add up with the signs turned round (credit-card exports list charges as
+  positive), they are turned round, with a warning. Wise, Monzo, Starling, N26, Chase and American
+  Express exports are recognized by their columns, which also names the account.
+
+The base currency is the first statement's unless set with `ledger base`. Exchange rates come from
+the European Central Bank (`ledger rates --fetch`, every currency it quotes since 1999), crossed
+through the base currency when the base is not the euro; the BNR's rates are read too.
+
+Banca Transilvania, ING and Revolut also have importers of their own:
 
 | | BT | ING | Revolut |
 | --- | --- | --- | --- |
