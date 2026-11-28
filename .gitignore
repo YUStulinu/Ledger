@@ -27,3 +27,4 @@ Thumbs.db
 
 # Local skill and listing files (not published here)
 /dist/
+/bin/
